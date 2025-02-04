@@ -11,6 +11,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCr
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerBlockPlacement;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
 import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
+import me.santio.fakegmc.debug.Debugger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -24,7 +25,14 @@ public class CreativePacketListener implements PacketListener {
     @Override
     public void onPacketReceive(PacketReceiveEvent event) {
         final Player player = event.getPlayer();
-        if (player == null || !FakeCreative.isCreative(player)) return;
+        if (player == null) return;
+        
+        final Debugger debugger = Debugger.player(player.getUniqueId());
+        if (event.getPacketType() != PacketType.Play.Client.CLIENT_TICK_END) {
+            debugger.debug(event.clone());
+        }
+        
+        if (!FakeCreative.isCreative(player)) return;
         
         if (event.getPacketType() == PacketType.Play.Client.CREATIVE_INVENTORY_ACTION) {
             final WrapperPlayClientCreativeInventoryAction packet = new WrapperPlayClientCreativeInventoryAction(event);

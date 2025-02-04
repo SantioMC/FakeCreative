@@ -68,9 +68,9 @@ public class FakeCreative extends JavaPlugin {
     }
     
     public static void remove(Player player) {
-        if (player.isOnline()) {
-            final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
-            
+        final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
+        
+        if (user != null) {
             // Send client-side creative game mode change packet
             final WrapperPlayServerChangeGameState packet = new WrapperPlayServerChangeGameState(
                 WrapperPlayServerChangeGameState.Reason.CHANGE_GAME_MODE,

@@ -1,9 +1,8 @@
-import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
-
 plugins {
     id("java")
     id("de.eldoria.plugin-yml.bukkit") version "0.6.0"
     id("com.gradleup.shadow") version "9.0.0-beta6"
+    id("io.freefair.lombok") version "8.12"
 }
 
 group = "me.santio"

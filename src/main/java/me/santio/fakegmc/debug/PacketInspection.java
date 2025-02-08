@@ -1,12 +1,11 @@
 package me.santio.fakegmc.debug;
 
+import com.github.retrooper.packetevents.event.PacketEvent;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
-import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerInput;
-import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerPosition;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState;
 import lombok.experimental.UtilityClass;
 import me.santio.fakegmc.FakeCreative;
 import net.kyori.adventure.text.Component;
@@ -36,14 +35,14 @@ public class PacketInspection {
     private final MethodHandles.Lookup lookup = MethodHandles.lookup();
     
     // This is really stupid, but I don't believe there's a way to map the packet
-    private String getWrapperPacketClassName(PacketReceiveEvent event) {
-        final PacketTypeCommon wrapper = event.getPacketType();
+    private String getWrapperPacketClassName(PacketTypeCommon wrapper) {
         final Enum<?> value = (Enum<?>) wrapper;
         final String group = wrapper.getClass().getName();
         
         final String namespace = group.substring(group.indexOf('$'))
             .replace("$", "");
-        final String wrapperName = "Wrapper" + namespace + toPascalCase(value.name());
+        final String wrapperName = "Wrapper" + namespace + toPascalCase(value.name())
+            .replace("ClientClient", "Client");
         
         final String wrapperGroup = group.replace("protocol.packettype.PacketType", "wrapper")
             .replace("$", ".")
@@ -52,21 +51,33 @@ public class PacketInspection {
         return wrapperGroup + "." + wrapperName;
     }
     
-    @SuppressWarnings({"unchecked", "MethodWithMultipleReturnPoints"})
-    private @Nullable PacketWrapper<?> getWrapper(PacketReceiveEvent event) {
-        final String wrapperClassName = getWrapperPacketClassName(event);
+    @SuppressWarnings({"unchecked", "MethodWithMultipleReturnPoints", "ChainOfInstanceofChecks"})
+    private @Nullable PacketWrapper<?> getWrapper(PacketEvent event, PacketTypeCommon packetType) {
+        final String wrapperClassName = getWrapperPacketClassName(packetType);
         
         final Class<? extends PacketWrapper<?>> wrapperClass;
         try {
             wrapperClass = (Class<? extends PacketWrapper<?>>) Class.forName(wrapperClassName);
         } catch (ClassNotFoundException e) {
-            FakeCreative.instance().getLogger().warning("Unable to find wrapper class for " + event.getPacketType() + " (" + wrapperClassName + ")");
+            FakeCreative.instance().getLogger().warning("Unable to find wrapper class for " + packetType + " (" + wrapperClassName + ")");
+            return null;
+        }
+        
+        Class<?> packetClass = null;
+        if (event instanceof PacketReceiveEvent) {
+            packetClass = PacketReceiveEvent.class;
+        } else if (event instanceof PacketSendEvent) {
+            packetClass = PacketSendEvent.class;
+        }
+        
+        if (packetClass == null) {
+            FakeCreative.instance().getLogger().warning("Unable to find packet class for " + packetType + " (" + wrapperClassName + ")");
             return null;
         }
         
         final MethodType methodType = MethodType.methodType(
             void.class,
-            PacketReceiveEvent.class
+            packetClass
         );
         
         final MethodHandle constructor;
@@ -106,12 +117,12 @@ public class PacketInspection {
         return data;
     }
     
-    public @Nullable Component inspect(PacketReceiveEvent event) {
-        final PacketWrapper<?> wrapper = getWrapper(event);
+    @Nullable Component inspect(PacketEvent event, PacketTypeCommon packetType, Player player) {
+        final PacketWrapper<?> wrapper = getWrapper(event, packetType);
         if (wrapper == null) return null;
         
-        final Player player = event.getPlayer();
         final Map<String, String> data = getData(wrapper);
+        final boolean isSent = packetType instanceof PacketType.Play.Server; // Server -> Client
         
         Component hover = Component.newline();
         for (var entry : data.entrySet()) {
@@ -123,11 +134,13 @@ public class PacketInspection {
             );
         }
         
-        return Component.text(
-            player.getName() + ": ",
-            NamedTextColor.GRAY
-        ).append(Component.text(
-            toPascalCase(event.getPacketType().getName()),
+        return Component.text(player.getName() + ": ", NamedTextColor.GRAY)
+            .append(Component.text(
+                isSent ? "<- " : "-> ",
+                isSent ? NamedTextColor.RED : NamedTextColor.GREEN
+            ))
+            .append(Component.text(
+            toPascalCase(packetType.getName()),
             NamedTextColor.AQUA
         )).hoverEvent(HoverEvent.showText(hover));
     }

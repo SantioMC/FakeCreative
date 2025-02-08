@@ -1,6 +1,8 @@
 package me.santio.fakegmc.debug;
 
+import com.github.retrooper.packetevents.event.PacketEvent;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
 import lombok.Getter;
@@ -38,7 +40,34 @@ public class Debugger implements ForwardingAudience.Single {
         PacketType.Play.Client.PLAYER_ROTATION,
         PacketType.Play.Client.KEEP_ALIVE,
         PacketType.Play.Client.PLAYER_INPUT,
-        PacketType.Play.Client.ENTITY_ACTION
+        PacketType.Play.Client.ENTITY_ACTION,
+        PacketType.Play.Client.TAB_COMPLETE,
+        PacketType.Play.Client.PONG,
+        PacketType.Play.Server.PING,
+        PacketType.Play.Server.CHUNK_DATA,
+        PacketType.Play.Server.ENTITY_POSITION_SYNC,
+        PacketType.Play.Server.ENTITY_HEAD_LOOK,
+        PacketType.Play.Server.UPDATE_HEALTH,
+        PacketType.Play.Server.ENTITY_RELATIVE_MOVE_AND_ROTATION,
+        PacketType.Play.Server.ENTITY_RELATIVE_MOVE,
+        PacketType.Play.Server.TAB_COMPLETE,
+        PacketType.Play.Server.ENTITY_VELOCITY,
+        PacketType.Play.Server.TIME_UPDATE,
+        PacketType.Play.Server.PLAYER_INFO_UPDATE,
+        PacketType.Play.Server.UNLOAD_CHUNK,
+        PacketType.Play.Server.UPDATE_VIEW_POSITION,
+        PacketType.Play.Server.BUNDLE,
+        PacketType.Play.Server.KEEP_ALIVE,
+        PacketType.Play.Server.ENTITY_ROTATION,
+        PacketType.Play.Server.ENTITY_METADATA,
+        PacketType.Play.Server.UPDATE_ATTRIBUTES,
+        PacketType.Play.Server.DESTROY_ENTITIES,
+        PacketType.Play.Server.SPAWN_ENTITY,
+        PacketType.Play.Server.ENTITY_EQUIPMENT,
+        PacketType.Play.Server.ENTITY_STATUS,
+        PacketType.Play.Server.DAMAGE_EVENT,
+        PacketType.Play.Server.UPDATE_LIGHT,
+        PacketType.Play.Server.SOUND_EFFECT
     );
     
     private static final ExecutorService executor = Executors.newCachedThreadPool();
@@ -55,14 +84,25 @@ public class Debugger implements ForwardingAudience.Single {
         debuggerCache.remove(player);
     }
     
-    public void debug(PacketReceiveEvent event) {
+    public void debug(PacketEvent event) {
+        final Player player = Bukkit.getPlayer(this.player);
+        if (player == null) return;
+        
+        final PacketTypeCommon packetType = switch (event) {
+            case PacketReceiveEvent receive -> receive.getPacketType();
+            case PacketSendEvent send -> send.getPacketType();
+            default -> null;
+        };
+        
+        if (packetType == null) return;
+        
         if (level.isAtLeast(Level.ALMOST_ALL)) {
-            if (spamPackets.contains(event.getPacketType()) && level != Level.ALL) {
+            if (spamPackets.contains(packetType) && level != Level.ALL) {
                 return;
             }
             
             executor.execute(() -> {
-                final @Nullable Component component = PacketInspection.inspect(event);
+                final @Nullable Component component = PacketInspection.inspect(event, packetType, player);
                 if (component == null) return;
                 
                 this.sendMessage(component);

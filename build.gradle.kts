@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id("java")
     id("de.eldoria.plugin-yml.bukkit") version "0.6.0"
@@ -18,10 +20,17 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
     implementation("com.github.retrooper:packetevents-spigot:2.7.0")
+    annotationProcessor("com.google.auto.service:auto-service:1.0.1")
+    compileOnly("com.google.auto.service:auto-service-annotations:1.0.1")
 }
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+}
+
+tasks.withType<ShadowJar> {
+    archiveFileName.set("FakeCreative.jar")
+    mergeServiceFiles()
 }
 
 bukkit {

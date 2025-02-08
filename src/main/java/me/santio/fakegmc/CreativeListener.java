@@ -1,9 +1,11 @@
 package me.santio.fakegmc;
 
 import me.santio.fakegmc.debug.Debugger;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
@@ -53,6 +55,16 @@ public class CreativeListener implements Listener {
     public void onHungerLoss(PlayerItemDamageEvent event) {
         if (!FakeCreative.isCreative(event.getPlayer())) return;
         event.setCancelled(true);
+    }
+    
+    @EventHandler
+    public void onAttack(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Player player)) return;
+        if (!FakeCreative.isCreative(player)) return;
+        
+        if (!(event.getEntity() instanceof LivingEntity)) {
+            event.getEntity().remove();
+        }
     }
     
 }

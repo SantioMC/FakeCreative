@@ -1,17 +1,23 @@
 package me.santio.fakegmc;
 
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.PacketListener;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerAbilities;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
+import me.santio.fakegmc.helper.GamemodeUtils;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.ServiceLoader;
+import java.util.Set;
+import java.util.UUID;
 
 public class FakeCreative extends JavaPlugin {
     
@@ -28,13 +34,23 @@ public class FakeCreative extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         
-        PacketEvents.getAPI().getEventManager().registerListener(
-            new CreativePacketListener(),
-            PacketListenerPriority.LOWEST
+        // Register packet listeners
+        final ServiceLoader<PacketListener> listeners = ServiceLoader.load(
+            PacketListener.class,
+            FakeCreative.class.getClassLoader()
         );
         
+        for (PacketListener listener : listeners) {
+            PacketEvents.getAPI().getEventManager().registerListener(
+                listener,
+                PacketListenerPriority.LOWEST
+            );
+        }
+        
+        // Register event listeners
         this.getServer().getPluginManager().registerEvents(new CreativeListener(), this);
         
+        // Register command
         final CreativeCommand command = new CreativeCommand();
         this.getServer().getPluginCommand("fakecreative").setExecutor(command);
         this.getServer().getPluginCommand("fakecreative").setTabCompleter(command);
@@ -55,8 +71,17 @@ public class FakeCreative extends JavaPlugin {
         final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
         
         // Send client-side creative game mode change packet
-        final WrapperPlayServerChangeGameState packet = new WrapperPlayServerChangeGameState(
+        final WrapperPlayServerChangeGameState gamemodePacket = new WrapperPlayServerChangeGameState(
             WrapperPlayServerChangeGameState.Reason.CHANGE_GAME_MODE,
+            1.0f
+        );
+        
+        final WrapperPlayServerPlayerAbilities abilitiesPacket = new WrapperPlayServerPlayerAbilities(
+            true,
+            false,
+            true,
+            true,
+            player.getFlySpeed() / 2,
             1.0f
         );
         
@@ -64,7 +89,9 @@ public class FakeCreative extends JavaPlugin {
         player.setGameMode(GameMode.SURVIVAL);
         
         creativePlayers.add(player.getUniqueId());
-        user.sendPacket(packet);
+        
+        user.sendPacket(gamemodePacket);
+        user.sendPacket(abilitiesPacket);
     }
     
     public static void remove(Player player) {
@@ -74,7 +101,7 @@ public class FakeCreative extends JavaPlugin {
             // Send client-side creative game mode change packet
             final WrapperPlayServerChangeGameState packet = new WrapperPlayServerChangeGameState(
                 WrapperPlayServerChangeGameState.Reason.CHANGE_GAME_MODE,
-                GamemodeMapping.fromBukkit(player.getGameMode()).id()
+                GamemodeUtils.toId(player.getGameMode())
             );
             
             user.sendPacket(packet);

@@ -40,6 +40,10 @@ public class ItemUtils {
         copy.unsetComponent(ComponentTypes.ENTITY_DATA);
         copy.unsetComponent(ComponentTypes.BUCKET_ENTITY_DATA);
         copy.unsetComponent(ComponentTypes.BEES);
+        copy.unsetComponent(ComponentTypes.FIREWORK_EXPLOSION);
+        copy.unsetComponent(ComponentTypes.FIREWORKS);
+        copy.unsetComponent(ComponentTypes.SUSPICIOUS_STEW_EFFECTS);
+        copy.unsetComponent(ComponentTypes.CAN_PLACE_ON);
         
         copy.setComponent(
             ComponentTypes.ATTRIBUTE_MODIFIERS,

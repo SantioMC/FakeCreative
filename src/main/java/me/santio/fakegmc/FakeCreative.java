@@ -7,7 +7,10 @@ import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.santio.fakegmc.helper.GamemodeUtils;
+import net.kyori.adventure.key.Key;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,6 +23,7 @@ import java.util.UUID;
 
 public class FakeCreative extends JavaPlugin {
     
+    public static final Key REACH_KEY = Key.key("fakecreative", "reach");
     private static final Set<UUID> creativePlayers = new HashSet<>();
     
     @Override
@@ -31,6 +35,7 @@ public class FakeCreative extends JavaPlugin {
     @SuppressWarnings("DataFlowIssue")
     @Override
     public void onEnable() {
+        this.saveDefaultConfig();
         PacketEvents.getAPI().init();
         
         // Register packet listeners
@@ -66,6 +71,7 @@ public class FakeCreative extends JavaPlugin {
         return creativePlayers.contains(player.getUniqueId());
     }
     
+    @SuppressWarnings({"DataFlowIssue", "removal"})
     public static void apply(Player player) {
         final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
         
@@ -75,14 +81,16 @@ public class FakeCreative extends JavaPlugin {
             1.0f
         );
         
-        player.setAllowFlight(true);
         player.setGameMode(GameMode.SURVIVAL);
-        
         creativePlayers.add(player.getUniqueId());
         
-        user.sendPacket(gamemodePacket);
+        Bukkit.getScheduler().runTaskLater(instance(), () -> {
+            player.setAllowFlight(true);
+            user.sendPacket(gamemodePacket);
+        }, 1L);
     }
     
+    @SuppressWarnings("DataFlowIssue")
     public static void remove(Player player) {
         final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
         
@@ -96,7 +104,10 @@ public class FakeCreative extends JavaPlugin {
             user.sendPacket(packet);
         }
         
-        player.setAllowFlight(false);
+        // todo: Used later, needs impl
+        player.getAttribute(Attribute.BLOCK_INTERACTION_RANGE).removeModifier(REACH_KEY);
+        player.setAllowFlight(GamemodeUtils.hasFlight(player.getGameMode()));
+        
         creativePlayers.remove(player.getUniqueId());
     }
     

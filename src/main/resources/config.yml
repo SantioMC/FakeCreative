@@ -1,0 +1,8 @@
+# FakeCreative - By Santio71
+
+# Configurations for when fake creative should be automatically given
+auto:
+  # Whether to give fake creative when a player joins
+  on-join: false
+  # Whether to give fake creative when a player goes into the actual creative mode
+  on-creative-enter: false

@@ -24,4 +24,13 @@ public class GamemodeUtils {
         };
     }
     
+    /**
+     * Whether the gamemode has flight
+     * @param gamemode The gamemode to check
+     * @return Whether the gamemode has flight
+     */
+    public boolean hasFlight(GameMode gamemode) {
+        return gamemode == GameMode.CREATIVE || gamemode == GameMode.SPECTATOR;
+    }
+    
 }

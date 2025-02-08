@@ -37,6 +37,9 @@ public class ItemUtils {
         copy.unsetComponent(ComponentTypes.WRITABLE_BOOK_CONTENT);
         copy.unsetComponent(ComponentTypes.STORED_ENCHANTMENTS);
         copy.unsetComponent(ComponentTypes.POTION_CONTENTS);
+        copy.unsetComponent(ComponentTypes.ENTITY_DATA);
+        copy.unsetComponent(ComponentTypes.BUCKET_ENTITY_DATA);
+        copy.unsetComponent(ComponentTypes.BEES);
         
         copy.setComponent(
             ComponentTypes.ATTRIBUTE_MODIFIERS,

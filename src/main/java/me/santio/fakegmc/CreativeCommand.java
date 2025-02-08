@@ -76,6 +76,9 @@ public class CreativeCommand implements CommandExecutor, TabCompleter {
                     .append(Component.text("Successfully set debug level to ", NamedTextColor.GRAY))
                     .append(Component.text(level.name(), NamedTextColor.YELLOW))
             );
+        } else if (args[0].equalsIgnoreCase("reload")) {
+            FakeCreative.instance().reloadConfig();
+            sender.sendMessage(Component.text("Successfully reloaded config!", NamedTextColor.GREEN));
         }
         
         return true;
@@ -87,7 +90,7 @@ public class CreativeCommand implements CommandExecutor, TabCompleter {
         
         if (args.length == 1) {
             // Hide debug since it's meant for developers
-            completions = List.of("enable", "disable");
+            completions = List.of("enable", "disable", "reload");
         } else if (args.length == 2) {
             switch (args[0]) {
                 case "enable", "disable" -> completions = Bukkit.getOnlinePlayers().stream()

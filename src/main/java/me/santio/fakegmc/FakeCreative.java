@@ -5,7 +5,6 @@ import com.github.retrooper.packetevents.event.PacketListener;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerAbilities;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.santio.fakegmc.helper.GamemodeUtils;
 import org.bukkit.GameMode;
@@ -76,22 +75,12 @@ public class FakeCreative extends JavaPlugin {
             1.0f
         );
         
-        final WrapperPlayServerPlayerAbilities abilitiesPacket = new WrapperPlayServerPlayerAbilities(
-            true,
-            false,
-            true,
-            true,
-            player.getFlySpeed() / 2,
-            1.0f
-        );
-        
         player.setAllowFlight(true);
         player.setGameMode(GameMode.SURVIVAL);
         
         creativePlayers.add(player.getUniqueId());
         
         user.sendPacket(gamemodePacket);
-        user.sendPacket(abilitiesPacket);
     }
     
     public static void remove(Player player) {

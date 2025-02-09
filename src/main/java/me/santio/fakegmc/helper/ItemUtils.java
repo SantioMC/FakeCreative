@@ -45,10 +45,21 @@ public class ItemUtils {
         // We want to limit how far data for these items can go
         
         // Add the name
-        final Component name = itemStack.getComponentOr(ComponentTypes.ITEM_NAME, Component.empty());
-        final String serializedName = serializer.serialize(name);
-        if (serializedName.length() <= 256) {
-            copy.setComponent(ComponentTypes.ITEM_NAME, serializer.deserialize(serializedName));
+        final Optional<Component> name = itemStack.getComponent(ComponentTypes.ITEM_NAME);
+        if (name.isPresent()) {
+            final String serializedName = serializer.serialize(name.get());
+            if (serializedName.length() <= 256) {
+                copy.setComponent(ComponentTypes.ITEM_NAME, name);
+            }
+        }
+        
+        // Add the custom name
+        final Optional<Component> customName = itemStack.getComponent(ComponentTypes.CUSTOM_NAME);
+        if (customName.isPresent()) {
+            final String serializedCustomName = serializer.serialize(customName.get());
+            if (serializedCustomName.length() <= 256) {
+                copy.setComponent(ComponentTypes.CUSTOM_NAME, customName);
+            }
         }
         
         // Add the lore
@@ -59,12 +70,8 @@ public class ItemUtils {
             .reduce(Component.empty(), ScopedComponent::append);
         
         final String serializedLoreString = serializer.serialize(rawLoreComponent);
-        final List<Component> serializedLore = Arrays.stream(serializedLoreString.split("\n"))
-            .map(serializer::deserialize)
-            .collect(Collectors.toList());
-        
-        if (serializedName.length() <= 512 && lore.getLines().size() <= 10) {
-            copy.setComponent(ComponentTypes.LORE, new ItemLore(serializedLore));
+        if (serializedLoreString.length() <= 512 && lore.getLines().size() <= 10) {
+            copy.setComponent(ComponentTypes.LORE, lore);
         }
         
         // Copy the banner patterns
@@ -84,9 +91,9 @@ public class ItemUtils {
                 final String propertyValue = entry.getValue();
                 final String propertySignature = entry.getSignature();
                 
-                if (propertyName.length() >= 32 || propertyName.contains("\n")) continue;
-                if (propertyValue.length() >= 64 || propertyValue.contains("\n")) continue;
-                if (propertySignature != null && (propertySignature.length() >= 256 || propertySignature.contains("\n"))) continue;
+                if (propertyName.length() >= 64 || propertyName.contains("\n")) continue;
+                if (propertyValue.length() >= 512 || propertyValue.contains("\n")) continue;
+                if (propertySignature != null && (propertySignature.length() >= 512 || propertySignature.contains("\n"))) continue;
                 
                 properties.add(new ItemProfile.Property(propertyName, propertyValue, propertySignature));
             }
@@ -101,6 +108,9 @@ public class ItemUtils {
         copy.setComponent(ComponentTypes.ENCHANTMENTS, itemStack.getComponent(ComponentTypes.ENCHANTMENTS));
         copy.setComponent(ComponentTypes.BASE_COLOR, itemStack.getComponent(ComponentTypes.BASE_COLOR));
         copy.setComponent(ComponentTypes.CUSTOM_MODEL_DATA_LISTS, itemStack.getComponent(ComponentTypes.CUSTOM_MODEL_DATA_LISTS));
+        copy.setComponent(ComponentTypes.TRIM, itemStack.getComponent(ComponentTypes.TRIM));
+        copy.setComponent(ComponentTypes.TOOL, itemStack.getComponent(ComponentTypes.TOOL));
+        copy.setComponent(ComponentTypes.STORED_ENCHANTMENTS, itemStack.getComponent(ComponentTypes.STORED_ENCHANTMENTS));
         
         return copy;
     }

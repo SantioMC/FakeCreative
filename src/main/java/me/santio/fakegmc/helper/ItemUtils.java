@@ -1,11 +1,22 @@
 package me.santio.fakegmc.helper;
 
 import com.github.retrooper.packetevents.protocol.component.ComponentTypes;
+import com.github.retrooper.packetevents.protocol.component.builtin.item.BannerLayers;
 import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemAttributeModifiers;
+import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemLore;
+import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemProfile;
+import com.github.retrooper.packetevents.protocol.item.banner.BannerPattern;
+import com.github.retrooper.packetevents.protocol.item.banner.BannerPatterns;
+import io.github.retrooper.packetevents.adventure.serializer.legacy.LegacyComponentSerializer;
 import lombok.experimental.UtilityClass;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.ScopedComponent;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A very useful utility class for working with items, specifically with sanitization
@@ -13,6 +24,8 @@ import org.bukkit.inventory.ItemStack;
  */
 @UtilityClass
 public class ItemUtils {
+    
+    private final LegacyComponentSerializer serializer = LegacyComponentSerializer.legacySection();
     
     /**
      * Sanitizes an item stack by removing all components that are not really relevant, especially for
@@ -24,31 +37,70 @@ public class ItemUtils {
     public com.github.retrooper.packetevents.protocol.item.ItemStack cleanItemStack(
         com.github.retrooper.packetevents.protocol.item.ItemStack itemStack
     ) {
-        final var copy = itemStack.copy();
+        final var copy = com.github.retrooper.packetevents.protocol.item.ItemStack.builder()
+            .type(itemStack.getType())
+            .amount(itemStack.getAmount())
+            .build();
         
-        copy.unsetComponent(ComponentTypes.BLOCK_ENTITY_DATA);
-        copy.unsetComponent(ComponentTypes.BLOCK_STATE);
-        copy.unsetComponent(ComponentTypes.CONTAINER);
-        copy.unsetComponent(ComponentTypes.CONTAINER_LOOT);
-        copy.unsetComponent(ComponentTypes.CUSTOM_DATA);
-        copy.unsetComponent(ComponentTypes.BUNDLE_CONTENTS);
-        copy.unsetComponent(ComponentTypes.ENCHANTABLE);
-        copy.unsetComponent(ComponentTypes.WRITTEN_BOOK_CONTENT);
-        copy.unsetComponent(ComponentTypes.WRITABLE_BOOK_CONTENT);
-        copy.unsetComponent(ComponentTypes.STORED_ENCHANTMENTS);
-        copy.unsetComponent(ComponentTypes.POTION_CONTENTS);
-        copy.unsetComponent(ComponentTypes.ENTITY_DATA);
-        copy.unsetComponent(ComponentTypes.BUCKET_ENTITY_DATA);
-        copy.unsetComponent(ComponentTypes.BEES);
-        copy.unsetComponent(ComponentTypes.FIREWORK_EXPLOSION);
-        copy.unsetComponent(ComponentTypes.FIREWORKS);
-        copy.unsetComponent(ComponentTypes.SUSPICIOUS_STEW_EFFECTS);
-        copy.unsetComponent(ComponentTypes.CAN_PLACE_ON);
+        // We want to limit how far data for these items can go
         
-        copy.setComponent(
-            ComponentTypes.ATTRIBUTE_MODIFIERS,
-            ItemAttributeModifiers.EMPTY
-        );
+        // Add the name
+        final Component name = itemStack.getComponentOr(ComponentTypes.ITEM_NAME, Component.empty());
+        final String serializedName = serializer.serialize(name);
+        if (serializedName.length() <= 256) {
+            copy.setComponent(ComponentTypes.ITEM_NAME, serializer.deserialize(serializedName));
+        }
+        
+        // Add the lore
+        final ItemLore lore = itemStack.getComponentOr(ComponentTypes.LORE, ItemLore.EMPTY);
+        final Component rawLoreComponent = lore.getLines().stream()
+            .map(serializer::serialize)
+            .map(Component::text)
+            .reduce(Component.empty(), ScopedComponent::append);
+        
+        final String serializedLoreString = serializer.serialize(rawLoreComponent);
+        final List<Component> serializedLore = Arrays.stream(serializedLoreString.split("\n"))
+            .map(serializer::deserialize)
+            .collect(Collectors.toList());
+        
+        if (serializedName.length() <= 512 && lore.getLines().size() <= 10) {
+            copy.setComponent(ComponentTypes.LORE, new ItemLore(serializedLore));
+        }
+        
+        // Copy the banner patterns
+        final Optional<BannerLayers> bannerPatterns = itemStack.getComponent(ComponentTypes.BANNER_PATTERNS);
+        if (bannerPatterns.isPresent() && bannerPatterns.get().getLayers().size() <= 12) {
+            copy.setComponent(ComponentTypes.BANNER_PATTERNS, bannerPatterns.get());
+        }
+        
+        // Copy the profile
+        final Optional<ItemProfile> optionalProfile = itemStack.getComponent(ComponentTypes.PROFILE);
+        if (optionalProfile.isPresent()) {
+            final ItemProfile profile = optionalProfile.get();
+            final List<ItemProfile.Property> properties = new ArrayList<>();
+            
+            for (ItemProfile.Property entry : profile.getProperties()) {
+                final String propertyName = entry.getName();
+                final String propertyValue = entry.getValue();
+                final String propertySignature = entry.getSignature();
+                
+                if (propertyName.length() >= 32 || propertyName.contains("\n")) continue;
+                if (propertyValue.length() >= 64 || propertyValue.contains("\n")) continue;
+                if (propertySignature != null && (propertySignature.length() >= 256 || propertySignature.contains("\n"))) continue;
+                
+                properties.add(new ItemProfile.Property(propertyName, propertyValue, propertySignature));
+            }
+            
+            final ItemProfile newProfile = new ItemProfile(profile.getName(), profile.getId(), properties);
+            copy.setComponent(ComponentTypes.PROFILE, newProfile);
+        }
+        
+        // Copy over absolute minimums
+        copy.setComponent(ComponentTypes.DYED_COLOR, itemStack.getComponent(ComponentTypes.DYED_COLOR));
+        copy.setComponent(ComponentTypes.UNBREAKABLE, itemStack.getComponent(ComponentTypes.UNBREAKABLE));
+        copy.setComponent(ComponentTypes.ENCHANTMENTS, itemStack.getComponent(ComponentTypes.ENCHANTMENTS));
+        copy.setComponent(ComponentTypes.BASE_COLOR, itemStack.getComponent(ComponentTypes.BASE_COLOR));
+        copy.setComponent(ComponentTypes.CUSTOM_MODEL_DATA_LISTS, itemStack.getComponent(ComponentTypes.CUSTOM_MODEL_DATA_LISTS));
         
         return copy;
     }
